@@ -161,10 +161,10 @@
                   </div>
                   
                   <div className="flex flex-wrap gap-2 mb-4">
-                    <button onClick={() => setVistaActual('agregar')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${vistaActual === 'agregar' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+                    <button onClick={() => {setVistaActual('agregar'); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });}} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${vistaActual === 'agregar' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
                       <Plus className="w-5 h-5" />Agregar Viaje
                     </button>
-                    <button onClick={() => setVistaActual('gastos')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${vistaActual === 'gastos' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+                    <button onClick={() => {setVistaActual('gastos'); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });}} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${vistaActual === 'gastos' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
                       <DollarSign className="w-5 h-5" />Agregar Gastos
                     </button>
                     <button onClick={() => setVistaActual('todos')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${vistaActual === 'todos' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
