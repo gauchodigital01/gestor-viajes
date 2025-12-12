@@ -3,305 +3,347 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Viajes - Camionero</title>
+    <title>Gestor de Viajes</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        body { -webkit-font-smoothing: antialiased; }
+    </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useEffect } = React;
-        const Truck = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>;
-        const Plus = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
-        const Trash2 = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>;
-        const List = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>;
-        const DollarSign = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
-        const fechaHoy = new Date().toISOString().split("T")[0];
+        const hoy = new Date().toISOString().split("T")[0];
         
         window.storage = {
-            get: async (key) => {
-                const value = localStorage.getItem(key);
-                return value ? { key, value, shared: false } : null;
-            },
-            set: async (key, value) => {
-                localStorage.setItem(key, value);
-                return { key, value, shared: false };
-            },
-            delete: async (key) => {
-                localStorage.removeItem(key);
-                return { key, deleted: true, shared: false };
-            }
+            get: async (k) => { const v = localStorage.getItem(k); return v ? { key: k, value: v } : null; },
+            set: async (k, v) => { localStorage.setItem(k, v); return { key: k, value: v }; },
+            delete: async (k) => { localStorage.removeItem(k); return { key: k, deleted: true }; }
         };
 
-        function GestorViajes() {
+        function App() {
           const [viajes, setViajes] = useState([]);
           const [gastos, setGastos] = useState([]);
-          const [vistaActual, setVistaActual] = useState('agregar');
-          const [nuevoViaje, setNuevoViaje] = useState({
-            diaCarga: fechaHoy, origen: '', destino: '', toneladas: '', nroCartaPorte: '', tarifa: '', saldo: '', factura: ''
-          });
-          const [nuevoGasto, setNuevoGasto] = useState({
-            fecha: fechaHoy, concepto: '', monto: '', descripcion: ''
-          });
-          const [cargando, setCargando] = useState(true);
+          const [vista, setVista] = useState('agregar');
+          const [viaje, setViaje] = useState({ diaCarga: hoy, origen: '', destino: '', toneladas: '', nroCartaPorte: '', tarifa: '', factura: '' });
+          const [gasto, setGasto] = useState({ fecha: hoy, monto: '', descripcion: 'Combustible' });
+          const [tutorial, setTutorial] = useState(false);
+          const [msg, setMsg] = useState('');
+          const [err, setErr] = useState({});
+          const [busqueda, setBusqueda] = useState('');
 
-          useEffect(() => { cargarDatos(); }, []);
+          useEffect(() => { 
+            (async () => {
+              try {
+                const v = await window.storage.get('viajes');
+                if (v?.value) setViajes(JSON.parse(v.value));
+                const g = await window.storage.get('gastos');
+                if (g?.value) setGastos(JSON.parse(g.value));
+              } catch (e) {}
+              if (!localStorage.getItem('tut') && viajes.length === 0) setTutorial(true);
+            })();
+          }, []);
 
-          const cargarDatos = async () => {
-            try {
-              const resultadoViajes = await window.storage.get('viajes-camionero');
-              if (resultadoViajes?.value) setViajes(JSON.parse(resultadoViajes.value));
-              const resultadoGastos = await window.storage.get('gastos-camionero');
-              if (resultadoGastos?.value) setGastos(JSON.parse(resultadoGastos.value));
-            } catch (error) { console.log('No hay datos'); }
-            setCargando(false);
-          };
-
-          const guardarViajes = async (nuevosViajes) => {
-            try { await window.storage.set('viajes-camionero', JSON.stringify(nuevosViajes)); }
-            catch (error) { alert('Error: ' + error.message); }
-          };
-
-          const guardarGastos = async (nuevosGastos) => {
-            try { await window.storage.set('gastos-camionero', JSON.stringify(nuevosGastos)); }
-            catch (error) { alert('Error: ' + error.message); }
-          };
-
-          const handleInputChange = (e) => {
-            const { name, value } = e.target;
-            setNuevoViaje(prev => ({ ...prev, [name]: value }));
-          };
-
-          const handleGastoChange = (e) => {
-            const { name, value } = e.target;
-            setNuevoGasto(prev => ({ ...prev, [name]: value }));
-          };
-
-          const agregarViaje = () => {
-            if (!nuevoViaje.diaCarga || !nuevoViaje.origen || !nuevoViaje.destino) {
-              alert('Por favor completa al menos: Día de carga, Origen y Destino');
-              return;
-            }
-            const viajeConId = { ...nuevoViaje, id: Date.now(), fechaCreacion: new Date().toISOString() };
-            const nuevosViajes = [...viajes, viajeConId];
-            setViajes(nuevosViajes);
-            guardarViajes(nuevosViajes);
-            setNuevoViaje({ diaCarga: fechaHoy, origen: '', destino: '', toneladas: '', nroCartaPorte: '', tarifa: '', saldo: '', factura: '' });
-          };
-
-          const agregarGasto = () => {
-            if (!nuevoGasto.fecha || !nuevoGasto.monto) {
-              alert('Por favor completa: Fecha y Monto');
-              return;
-            }
-            const gastoConId = { ...nuevoGasto, id: Date.now(), fechaCreacion: new Date().toISOString() };
-            const nuevosGastos = [...gastos, gastoConId];
-            setGastos(nuevosGastos);
-            guardarGastos(nuevosGastos);
-            setNuevoGasto({ fecha: fechaHoy, monto: '', descripcion: '' });
-          };
-
-          const eliminarViaje = (id) => {
-            if (confirm('¿Eliminar viaje?')) {
-              const nuevosViajes = viajes.filter(v => v.id !== id);
-              setViajes(nuevosViajes);
-              guardarViajes(nuevosViajes);
-            }
-          };
-
-          const eliminarGasto = (id) => {
-            if (confirm('¿Eliminar gasto?')) {
-              const nuevosGastos = gastos.filter(g => g.id !== id);
-              setGastos(nuevosGastos);
-              guardarGastos(nuevosGastos);
-            }
-          };
-
-          const calcularTotales = () => {
-            return viajes.reduce((acc, viaje) => {
-              const toneladas = parseFloat(viaje.toneladas) || 0;
-              const tarifa = parseFloat(viaje.tarifa) || 0;
-              const saldo = toneladas * tarifa;
-              acc.saldo += saldo;
-              acc.iva += saldo * 0.21;
-              acc.totalMiva += saldo * 1.21;
-              return acc;
-            }, { saldo: 0, iva: 0, totalMiva: 0 });
-          };
-
-          const calcularTotalGastos = () => gastos.reduce((total, gasto) => total + (parseFloat(gasto.monto) || 0), 0);
+          const guardarV = async (nv) => { try { await window.storage.set('viajes', JSON.stringify(nv)); } catch (e) {} };
+          const guardarG = async (ng) => { try { await window.storage.set('gastos', JSON.stringify(ng)); } catch (e) {} };
           
-          const calcularIVAGastos = () => gastos.reduce((total, gasto) => {
-            const monto = parseFloat(gasto.monto) || 0;
-            return total + (monto * 0.21);
-          }, 0);
+          const mostrarMsg = (m) => { setMsg(m); setTimeout(() => setMsg(''), 3000); };
 
-          const totales = calcularTotales();
-          const totalGastos = calcularTotalGastos();
-          const ivaGastos = calcularIVAGastos();
-          const ivaNeto = totales.iva - ivaGastos;
+          const addViaje = () => {
+            const e = {};
+            if (!viaje.diaCarga) e.diaCarga = 1;
+            if (!viaje.origen) e.origen = 1;
+            if (!viaje.destino) e.destino = 1;
+            setErr(e);
+            if (Object.keys(e).length > 0) { alert('⚠️ Completa los campos en rojo'); return; }
+            const nv = [...viajes, { ...viaje, id: Date.now() }];
+            setViajes(nv);
+            guardarV(nv);
+            setViaje({ diaCarga: hoy, origen: '', destino: '', toneladas: '', nroCartaPorte: '', tarifa: '', factura: '' });
+            mostrarMsg('✓ Viaje agregado');
+            setErr({});
+          };
 
-          if (cargando) {
-            return (
-              <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-                <div className="text-xl text-gray-600">Cargando...</div>
-              </div>
-            );
-          }
+          const addGasto = () => {
+            const e = {};
+            if (!gasto.fecha) e.fecha = 1;
+            if (!gasto.monto) e.monto = 1;
+            setErr(e);
+            if (Object.keys(e).length > 0) { alert('⚠️ Completa los campos en rojo'); return; }
+            const ng = [...gastos, { ...gasto, id: Date.now() }];
+            setGastos(ng);
+            guardarG(ng);
+            setGasto({ fecha: hoy, monto: '', descripcion: 'Combustible' });
+            mostrarMsg('✓ Gasto agregado');
+            setErr({});
+          };
+
+          const delViaje = (id, v) => {
+            if (confirm(`¿Eliminar ${v.origen} → ${v.destino}?`)) {
+              const nv = viajes.filter(x => x.id !== id);
+              setViajes(nv);
+              guardarV(nv);
+              mostrarMsg('✓ Eliminado');
+            }
+          };
+
+          const delGasto = (id, g) => {
+            if (confirm(`¿Eliminar gasto $${g.monto}?`)) {
+              const ng = gastos.filter(x => x.id !== id);
+              setGastos(ng);
+              guardarG(ng);
+              mostrarMsg('✓ Eliminado');
+            }
+          };
+
+          const totV = viajes.reduce((a, v) => {
+            const t = parseFloat(v.toneladas) || 0;
+            const r = parseFloat(v.tarifa) || 0;
+            const s = t * r;
+            a.s += s; a.i += s * 0.21; a.t += s * 1.21;
+            return a;
+          }, { s: 0, i: 0, t: 0 });
+
+          const totG = gastos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
+          const ivaG = gastos.reduce((a, g) => a + ((parseFloat(g.monto) || 0) * 0.21), 0);
+          const ivaN = totV.i - ivaG;
+
+          const viajesFiltrados = viajes.filter(v => {
+            const termino = busqueda.toLowerCase();
+            return v.origen.toLowerCase().includes(termino) || 
+                   v.destino.toLowerCase().includes(termino) ||
+                   (v.nroCartaPorte && v.nroCartaPorte.toLowerCase().includes(termino)) ||
+                   (v.factura && v.factura.toLowerCase().includes(termino)) ||
+                   new Date(v.diaCarga).toLocaleDateString('es-AR').includes(termino);
+          });
 
           return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-              <div className="max-w-7xl mx-auto">
-                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Truck className="w-8 h-8 text-blue-600" />
-                    <h1 className="text-3xl font-bold text-gray-800">Gestor de Viajes</h1>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <button onClick={() => {setVistaActual('agregar'); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });}} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${vistaActual === 'agregar' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
-                      <Plus className="w-5 h-5" />Agregar Viaje
-                    </button>
-                    <button onClick={() => {setVistaActual('gastos'); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });}} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${vistaActual === 'gastos' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
-                      <DollarSign className="w-5 h-5" />Agregar Gastos
-                    </button>
-                    <button onClick={() => setVistaActual('todos')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${vistaActual === 'todos' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
-                      <List className="w-5 h-5" />Ver Todos
+            <div className="min-h-screen bg-gray-50">
+              {tutorial && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white p-6 max-w-md border">
+                    <h2 className="text-lg font-medium mb-4">👋 Bienvenido</h2>
+                    <div className="space-y-2 text-sm text-gray-600 mb-6">
+                      <p><strong>Agregar Viaje:</strong> Fecha, origen y destino son obligatorios (*). Lo demás es opcional.</p>
+                      <p><strong>Agregar Gastos:</strong> Solo fecha y monto son obligatorios.</p>
+                      <p><strong>Ver Todos:</strong> Revisa todo. El IVA se calcula automáticamente.</p>
+                    </div>
+                    <button onClick={() => { setTutorial(false); localStorage.setItem('tut', '1'); }} 
+                      className="w-full px-6 py-2 text-sm font-medium bg-gray-900 text-white hover:bg-gray-800">
+                      Entendido
                     </button>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <div className="text-sm text-green-600 font-semibold">Total Ganancia</div>
-                      <div className="text-2xl font-bold text-green-700">${totales.totalMiva.toFixed(2)}</div>
-                    </div>
-                    <div className="bg-red-50 p-4 rounded-lg">
-                      <div className="text-sm text-red-600 font-semibold">Total Gastos</div>
-                      <div className="text-2xl font-bold text-red-700">${totalGastos.toFixed(2)}</div>
-                    </div>
-                    <div className="bg-purple-50 p-4 rounded-lg">
-                      <div className="text-sm text-purple-600 font-semibold">IVA Neto a Pagar</div>
-                      <div className="text-2xl font-bold text-purple-700">${ivaNeto.toFixed(2)}</div>
-                    </div>
+                </div>
+              )}
+
+              {msg && (
+                <div className="fixed top-4 right-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 text-sm z-50">
+                  {msg}
+                </div>
+              )}
+
+              <div className="max-w-5xl mx-auto px-4 py-8">
+                <div className="mb-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h1 className="text-2xl font-light text-gray-900">Gestor de Viajes</h1>
+                    <button onClick={() => setTutorial(true)} className="text-xs text-gray-500 hover:text-gray-700">
+                      ¿Cómo usar?
+                    </button>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div className="bg-orange-50 p-4 rounded-lg">
-                      <div className="text-sm text-orange-600 font-semibold">IVA Ventas</div>
-                      <div className="text-2xl font-bold text-orange-700">${totales.iva.toFixed(2)}</div>
+                  <div className="flex gap-1 mb-8 border-b border-gray-200">
+                    {['agregar', 'gastos', 'todos'].map(v => (
+                      <button key={v} onClick={() => setVista(v)} 
+                        className={`px-4 py-2 text-sm font-medium ${vista === v ? 'text-gray-900 border-b-2 border-gray-900' : 'text-gray-500'}`}>
+                        {v === 'agregar' ? 'Agregar Viaje' : v === 'gastos' ? 'Agregar Gastos' : 'Ver Todos'}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div className="bg-white p-4 border">
+                      <div className="text-xs text-gray-500 mb-1">Ganancia Total</div>
+                      <div className="text-xl font-light text-green-600">${totV.t.toLocaleString("es-AR")}</div>
                     </div>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="text-sm text-blue-600 font-semibold">IVA Gastos (Crédito)</div>
-                      <div className="text-2xl font-bold text-blue-700">${ivaGastos.toFixed(2)}</div>
+                    <div className="bg-white p-4 border">
+                      <div className="text-xs text-gray-500 mb-1">Gastos Total</div>
+                      <div className="text-xl font-light text-red-600">${totG.toLocaleString("es-AR")}</div>
+                    </div>
+                    <div className="bg-white p-4 border">
+                      <div className="text-xs text-gray-500 mb-1">IVA a Pagar</div>
+                      <div className="text-xl font-light text-orange-600">${ivaN.toLocaleString("es-AR")}</div>
+                    </div>
+                    <div className="bg-white p-4 border">
+                      <div className="text-xs text-gray-500 mb-1">Balance Neto</div>
+                      <div className={`text-xl font-light ${(totV.t - totG) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                        ${(totV.t - totG).toLocaleString("es-AR")}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {vistaActual === 'agregar' && (
-                  <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                      <Plus className="w-6 h-6" />Agregar Nuevo Viaje
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <input type="date" name="diaCarga" value={nuevoViaje.diaCarga} onChange={handleInputChange} className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Día" />
-                      <input type="text" name="origen" value={nuevoViaje.origen} onChange={handleInputChange} className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Origen" />
-                      <input type="text" name="destino" value={nuevoViaje.destino} onChange={handleInputChange} className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Destino" />
-                      <input type="number" name="toneladas" value={nuevoViaje.toneladas} onChange={handleInputChange} className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Toneladas" />
-                      <input type="text" name="nroCartaPorte" value={nuevoViaje.nroCartaPorte} onChange={handleInputChange} className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Carta Porte" />
-                      <input type="number" name="tarifa" value={nuevoViaje.tarifa} onChange={handleInputChange} className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Tarifa" step="0.01" />
-                      <input type="text" name="factura" value={nuevoViaje.factura} onChange={handleInputChange} className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Factura" />
-                    </div>
-
-                    {(nuevoViaje.toneladas || nuevoViaje.tarifa) && (
-                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-semibold text-gray-700 mb-2">Vista Previa:</div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                          <div><span className="text-gray-600">Total:</span><span className="ml-2 font-semibold text-green-600">${((parseFloat(nuevoViaje.toneladas) || 0) * (parseFloat(nuevoViaje.tarifa) || 0)).toFixed(2)}</span></div>
-                          <div><span className="text-gray-600">IVA (21%):</span><span className="ml-2 font-semibold text-purple-600">${(((parseFloat(nuevoViaje.toneladas) || 0) * (parseFloat(nuevoViaje.tarifa) || 0)) * 0.21).toFixed(2)}</span></div>
-                          <div><span className="text-gray-600">Total + IVA:</span><span className="ml-2 font-semibold text-indigo-600">${(((parseFloat(nuevoViaje.toneladas) || 0) * (parseFloat(nuevoViaje.tarifa) || 0)) * 1.21).toFixed(2)}</span></div>
+                {vista === 'agregar' && (
+                  <div className="bg-white border p-6 mb-6">
+                    <h2 className="text-sm font-medium mb-4">Nuevo Viaje</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Fecha *</label>
+                        <input type="date" value={viaje.diaCarga} onChange={e => { setViaje({...viaje, diaCarga: e.target.value}); setErr({...err, diaCarga: 0}); }}
+                          className={`w-full px-3 py-2 text-sm border ${err.diaCarga ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:border-gray-900`} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Origen *</label>
+                        <input type="text" value={viaje.origen} onChange={e => { setViaje({...viaje, origen: e.target.value}); setErr({...err, origen: 0}); }}
+                          className={`w-full px-3 py-2 text-sm border ${err.origen ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:border-gray-900`} placeholder="Ej: Buenos Aires" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Destino *</label>
+                        <input type="text" value={viaje.destino} onChange={e => { setViaje({...viaje, destino: e.target.value}); setErr({...err, destino: 0}); }}
+                          className={`w-full px-3 py-2 text-sm border ${err.destino ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:border-gray-900`} placeholder="Ej: Rosario" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Toneladas</label>
+                      <input type="number" value={viaje.toneladas} onChange={e => setViaje({...viaje, toneladas: e.target.value})} className="px-3 py-2 text-sm border border-gray-300 focus:outline-none focus:border-gray-900" placeholder="Ej: 30" min="0" step="0.01" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Tarifa</label>
+                      <input type="number" value={viaje.tarifa} onChange={e => setViaje({...viaje, tarifa: e.target.value})} className="px-3 py-2 text-sm border border-gray-300 focus:outline-none focus:border-gray-900" placeholder="Ej: 6900" min="0" step="0.01" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Carta Porte</label>
+                        <input type="text" value={viaje.nroCartaPorte} onChange={e => setViaje({...viaje, nroCartaPorte: e.target.value})} className="px-3 py-2 text-sm border border-gray-300 focus:outline-none focus:border-gray-900" placeholder="Ej: E-8000" />
+                      </div>
+                      <div>
+                      <label className="block text-xs text-gray-600 mb-1">Factura</label>
+                        <input type="text" value={viaje.factura} onChange={e => setViaje({...viaje, factura: e.target.value})} className="px-3 py-2 text-sm border border-gray-300 focus:outline-none focus:border-gray-900 md:col-span-3" placeholder="Ej: Borgetto" />
                         </div>
+                    </div>
+                    {(viaje.toneladas && viaje.tarifa) && (
+                      <div className="mb-4 py-3 border-t text-xs text-gray-600">
+                        Total: ${((parseFloat(viaje.toneladas) || 0) * (parseFloat(viaje.tarifa) || 0)).toLocaleString("es-AR")} · 
+                        IVA: ${(((parseFloat(viaje.toneladas) || 0) * (parseFloat(viaje.tarifa) || 0)) * 0.21).toLocaleString("es-AR")} · 
+                        Con IVA: <span className="text-green-600 font-medium">${(((parseFloat(viaje.toneladas) || 0) * (parseFloat(viaje.tarifa) || 0)) * 1.21).toLocaleString("es-AR")}</span>
                       </div>
                     )}
-                    
-                    <button onClick={agregarViaje} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg flex items-center gap-2">
-                      <Plus className="w-5 h-5" />Agregar Viaje
-                    </button>
+                    <button onClick={addViaje} className="px-6 py-2 text-sm font-medium bg-gray-900 text-white hover:bg-gray-800">Agregar Viaje</button>
                   </div>
                 )}
 
-                {vistaActual === 'gastos' && (
-                  <div className="bg-white rounded-lg shadow-lg p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                      <Plus className="w-6 h-6" />Agregar Nuevo Gasto
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input type="date" name="fecha" value={nuevoGasto.fecha} onChange={handleGastoChange} className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                      <input type="number" name="monto" value={nuevoGasto.monto} onChange={handleGastoChange} className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Monto" step="0.01" />
-                      <input type="text" name="descripcion" value={nuevoGasto.descripcion} onChange={handleGastoChange} className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 md:col-span-2" placeholder="Descripción" />
+                {vista === 'gastos' && (
+                  <div className="bg-white border p-6">
+                    <h2 className="text-sm font-medium mb-4">Nuevo Gasto</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Fecha *</label>
+                        <input type="date" value={gasto.fecha} onChange={e => { setGasto({...gasto, fecha: e.target.value}); setErr({...err, fecha: 0}); }}
+                          className={`w-full px-3 py-2 text-sm border ${err.fecha ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:border-gray-900`} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Monto *</label>
+                        <input type="number" value={gasto.monto} onChange={e => { setGasto({...gasto, monto: e.target.value}); setErr({...err, monto: 0}); }}
+                          className={`w-full px-3 py-2 text-sm border ${err.monto ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:border-gray-900`} placeholder="Ej: 15000" min="0" step="0.01" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Categoría</label>
+                        <select value={gasto.descripcion} onChange={e => setGasto({...gasto, descripcion: e.target.value})} 
+                          className="w-full px-3 py-2 text-sm border border-gray-300 focus:outline-none focus:border-gray-900">
+                          <option value="Combustible">Combustible</option>
+                          <option value="Mantenimiento">Mantenimiento</option>
+                          <option value="Otro">Otro</option>
+                        </select>
+                      </div>
                     </div>
-                    {nuevoGasto.monto && (
-                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-semibold text-gray-700 mb-2">Vista Previa:</div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                          <div><span className="text-gray-600">Total:</span><span className="ml-2 font-semibold text-red-600">${(parseFloat(nuevoGasto.monto) || 0).toFixed(2)}</span></div>
-                          <div><span className="text-gray-600">IVA Crédito (21%):</span><span className="ml-2 font-semibold text-green-600">${((parseFloat(nuevoGasto.monto) || 0) * 0.21).toFixed(2)}</span></div>
-                        </div>
+                    {gasto.monto && (
+                      <div className="mb-4 py-3 border-t text-xs text-gray-600">
+                        Gasto: <span className="text-red-600 font-medium">${(parseFloat(gasto.monto) || 0).toLocaleString("es-AR")}</span> · 
+                        IVA Crédito: <span className="text-green-600 font-medium">${((parseFloat(gasto.monto) || 0) * 0.21).toLocaleString("es-AR")}</span>
+                        <div className="mt-1 text-gray-500">💡 El IVA de gastos se resta del IVA a pagar</div>
                       </div>
                     )}
-                    <button onClick={agregarGasto} className="mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg flex items-center gap-2">
-                      <Plus className="w-5 h-5" />Agregar Gasto
-                    </button>
+                    <button onClick={addGasto} className="px-6 py-2 text-sm font-medium bg-gray-900 text-white hover:bg-gray-800">Agregar Gasto</button>
                   </div>
                 )}
 
-                {vistaActual === 'todos' && (
+                {vista === 'todos' && (
                   <div className="space-y-6">
-                    <div className="bg-white rounded-lg shadow-lg p-6">
-                      <h2 className="text-xl font-bold text-gray-800 mb-4">Todos los Viajes ({viajes.length})</h2>
+                    <div className="bg-white border p-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-sm font-medium">Mis Viajes</h2>
+                        <span className="text-xs text-gray-500">{viajesFiltrados.length} {viajesFiltrados.length === 1 ? 'viaje' : 'viajes'}</span>
+                      </div>
+                      
+                      {viajes.length > 0 && (
+                        <div className="mb-4">
+                          <input 
+                            type="text" 
+                            value={busqueda} 
+                            onChange={e => setBusqueda(e.target.value)}
+                            placeholder="Buscar por origen, destino, carta porte, factura o fecha..."
+                            className="w-full px-3 py-2 text-sm border border-gray-300 focus:outline-none focus:border-gray-900"
+                          />
+                        </div>
+                      )}
+                      
                       {viajes.length === 0 ? (
-                        <div className="text-center text-gray-500 py-8">No hay viajes registrados.</div>
+                        <div className="text-center py-12">
+                          <div className="text-gray-400 mb-2">📦</div>
+                          <div className="text-sm text-gray-500 mb-2">No hay viajes aún</div>
+                          <button onClick={() => setVista('agregar')} className="text-sm text-gray-700 hover:text-gray-900 underline">Agregar primer viaje</button>
+                        </div>
+                      ) : viajesFiltrados.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="text-gray-400 mb-2">🔍</div>
+                          <div className="text-sm text-gray-500 mb-2">No se encontraron viajes</div>
+                          <button onClick={() => setBusqueda('')} className="text-sm text-gray-700 hover:text-gray-900 underline">Limpiar búsqueda</button>
+                        </div>
                       ) : (
                         <div className="space-y-2">
-                          {viajes.sort((a, b) => new Date(b.diaCarga) - new Date(a.diaCarga)).map((viaje) => (
-                            <div key={viaje.id} className="flex justify-between items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 border border-green-200">
-                              <div className="flex-1">
-                                <div className="font-semibold text-gray-800">{viaje.origen} → {viaje.destino}</div>
-                                <div className="text-sm text-gray-600">{viaje.diaCarga} | {viaje.toneladas} ton | ${viaje.tarifa}/ton</div>
+                          {viajesFiltrados.sort((a, b) => new Date(b.diaCarga) - new Date(a.diaCarga)).map(v => (
+                            <div key={v.id} className="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate">{v.origen} → {v.destino}</div>
+                                <div className="text-xs text-gray-500">{new Date(v.diaCarga).toLocaleDateString('es-AR')}{v.toneladas && ` · ${v.toneladas}t`}{v.tarifa && ` · $${v.tarifa}/t`}</div>
                               </div>
-                              <div className="text-right mr-4">
-                                <div className="font-bold text-green-600">${(viaje.toneladas * viaje.tarifa).toFixed(2)}</div>
-                                <div className="text-xs text-gray-600">{viaje.factura || viaje.nroCartaPorte}</div>
+                              <div className="text-right">
+                                <div className="text-sm font-medium text-green-600">${((parseFloat(v.toneladas) || 0) * (parseFloat(v.tarifa) || 0)).toLocaleString("es-AR")}</div>
+                                <div className="text-xs text-gray-500">{v.factura || v.nroCartaPorte || '—'}</div>
                               </div>
-                              <button onClick={() => eliminarViaje(viaje.id)} className="text-red-600 hover:text-red-800">
-                                <Trash2 className="w-5 h-5" />
-                              </button>
+                              <button onClick={() => delViaje(v.id, v)} className="text-gray-400 hover:text-red-600 text-xs ml-2 px-2">✕</button>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
 
-                    <div className="bg-white rounded-lg shadow-lg p-6">
-                      <h2 className="text-xl font-bold text-gray-800 mb-4">Todos los Gastos ({gastos.length})</h2>
+                    <div className="bg-white border p-6">
+                      <div className="flex justify-between mb-4">
+                        <h2 className="text-sm font-medium">Mis Gastos</h2>
+                        <span className="text-xs text-gray-500">{gastos.length} {gastos.length === 1 ? 'gasto' : 'gastos'}</span>
+                      </div>
                       {gastos.length === 0 ? (
-                        <div className="text-center text-gray-500 py-8">No hay gastos registrados.</div>
+                        <div className="text-center py-12">
+                          <div className="text-gray-400 mb-2">💰</div>
+                          <div className="text-sm text-gray-500 mb-2">No hay gastos aún</div>
+                          <button onClick={() => setVista('gastos')} className="text-sm text-gray-700 hover:text-gray-900 underline">Agregar primer gasto</button>
+                        </div>
                       ) : (
                         <div className="space-y-2">
-                          {gastos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).map((gasto) => (
-                            <div key={gasto.id} className="flex justify-between items-center p-3 bg-red-50 rounded-lg hover:bg-red-100 border border-red-200">
-                              <div className="flex-1">
-                                <div className="font-semibold text-gray-800">{gasto.descripcion || 'Sin descripción'}</div>
-                                <div className="text-sm text-gray-600">{gasto.fecha}</div>
+                          {gastos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).map(g => (
+                            <div key={g.id} className="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate">{g.descripcion || 'Sin descripción'}</div>
+                                <div className="text-xs text-gray-500">{new Date(g.fecha).toLocaleDateString('es-AR')}</div>
                               </div>
-                              <div className="text-right mr-4">
-                                <div className="font-bold text-red-600">${parseFloat(gasto.monto).toFixed(2)}</div>
-                                <div className="text-xs text-green-600">IVA Crédito: ${(parseFloat(gasto.monto) * 0.21).toFixed(2)}</div>
+                              <div className="text-right">
+                                <div className="text-sm font-medium text-red-600">${parseFloat(g.monto).toLocaleString("es-AR")}</div>
+                                <div className="text-xs text-gray-500">IVA: ${(parseFloat(g.monto) * 0.21).toLocaleString("es-AR")}</div>
                               </div>
-                              <button onClick={() => eliminarGasto(gasto.id)} className="text-red-600 hover:text-red-800">
-                                <Trash2 className="w-5 h-5" />
-                              </button>
+                              <button onClick={() => delGasto(g.id, g)} className="text-gray-400 hover:text-red-600 text-xs ml-2 px-2">✕</button>
                             </div>
                           ))}
                         </div>
@@ -314,7 +356,7 @@
           );
         }
 
-        ReactDOM.render(<GestorViajes />, document.getElementById('root'));
+        ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
 </html>
